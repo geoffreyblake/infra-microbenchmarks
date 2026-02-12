@@ -123,7 +123,10 @@ static void print_help(void) {
 " -C | --bw-coarse-delay       count    bandwidth coarse delay (coarse loop nops).  Increase to slow bandwidth.\n"
 " -H | --bw-use-hugepages      size     hugepage size to use for bandwidth. Use \"-H help\" to show known sizes.\n"
 " -Z | --bw-cacheline-bytes    bytes    cacheline length for bandwidth memory region size\n"
-" -W | --bw-write                       instead of reads, use writes for memory bandwidth traffic\n"
+" -O | --bw-operation          op       bandwidth operation: read, write, memcpy, memset1, memset64,\n"
+"                                       mix100r, mix5w, mix10w, mix15w, mix20w, mix25w, mix30w, mix35w, mix40w, mix50w\n"
+"      --bw-stride             bytes    stride in bytes for bandwidth operations (default: 64)\n"
+"      --bw-random-jump        freq     jump to random location every N iterations (0=disabled)\n"
 "\n"
 " --help                                this screen\n"
 "\n"
@@ -143,7 +146,9 @@ void handle_args(int argc, char ** argv, args_t * pargs) {
         help_val = 1,
         estimate_hwclock_freq_val = 2,
         delay_ticks_val = 3,
-        show_per_thread_concurrency_val = 4
+        show_per_thread_concurrency_val = 4,
+        bw_stride_val = 5,
+        bw_random_jump_val = 6
     };
 
     static struct option long_options[] = {
@@ -182,7 +187,9 @@ void handle_args(int argc, char ** argv, args_t * pargs) {
         {"bw-coarse-delay",     required_argument,  0,      'C'},
         {"bw-use-hugepages",    required_argument,  0,      'H'},
         {"bw-cacheline-bytes",  required_argument,  0,      'Z'},
-        {"bw-write",            no_argument,        0,      'W'},
+        {"bw-operation",        required_argument,  0,      'O'},
+        {"bw-stride",           required_argument,  0,      bw_stride_val},
+        {"bw-random-jump",      required_argument,  0,      bw_random_jump_val},
 
         {"help",                no_argument,        0,      help_val},
         {0,                     0,                  0,      0}
@@ -192,7 +199,7 @@ void handle_args(int argc, char ** argv, args_t * pargs) {
 
     while (1) {
 
-        int c = getopt_long(argc, argv, "D:S:d:Qq:f:t:l:n:e:i:z:j:o:crh:w:su:B:I:L:F:C:H:Z:W", long_options, NULL);
+        int c = getopt_long(argc, argv, "D:S:d:Qq:f:t:l:n:e:i:z:j:o:crh:w:su:B:I:L:F:C:H:Z:O:", long_options, NULL);
 
         switch (c) {
 
@@ -362,8 +369,54 @@ void handle_args(int argc, char ** argv, args_t * pargs) {
                 pargs->bw_cacheline_bytes = strtoul(optarg, NULL, 0);
                 break;
 
-            case 'W':  // --bw-write                    : use writes for memory bandwidth traffic
-                pargs->bw_write = 1;
+            case 'O':  // --bw-operation op             : bandwidth operation type
+                if (strcasecmp(optarg, "read") == 0) {
+                    pargs->bw_op = BW_OP_READ;
+                } else if (strcasecmp(optarg, "write") == 0) {
+                    pargs->bw_op = BW_OP_WRITE;
+                } else if (strcasecmp(optarg, "memcpy") == 0) {
+                    pargs->bw_op = BW_OP_MEMCPY;
+                } else if (strcasecmp(optarg, "memcpy_noinops") == 0) {
+                    pargs->bw_op = BW_OP_MEMCPY_NOINOPS;
+                } else if (strcasecmp(optarg, "memset1") == 0) {
+                    pargs->bw_op = BW_OP_MEMSET1;
+                } else if (strcasecmp(optarg, "memset64") == 0) {
+                    pargs->bw_op = BW_OP_MEMSET64;
+                } else if (strcasecmp(optarg, "mix100r") == 0) {
+                    pargs->bw_op = BW_OP_MIX_100R;
+                } else if (strcasecmp(optarg, "mix5w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_5W;
+                } else if (strcasecmp(optarg, "mix10w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_10W;
+                } else if (strcasecmp(optarg, "mix15w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_15W;
+                } else if (strcasecmp(optarg, "mix20w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_20W;
+                } else if (strcasecmp(optarg, "mix25w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_25W;
+                } else if (strcasecmp(optarg, "mix30w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_30W;
+                } else if (strcasecmp(optarg, "mix35w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_35W;
+                } else if (strcasecmp(optarg, "mix40w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_40W;
+                } else if (strcasecmp(optarg, "mix45w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_45W;
+                } else if (strcasecmp(optarg, "mix50w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_50W;
+                } else {
+                    printf("Error: unknown bandwidth operation '%s'\n", optarg);
+                    printf("Valid operations: read, write, memcpy, memset1, memset64, mix100r, mix5w-mix50w\n");
+                    exit(-1);
+                }
+                break;
+
+            case bw_stride_val:  // --bw-stride bytes
+                pargs->bw_stride = strtoul(optarg, NULL, 0);
+                break;
+
+            case bw_random_jump_val:  // --bw-random-jump freq
+                pargs->bw_random_jump_freq = strtoul(optarg, NULL, 0);
                 break;
 
         }

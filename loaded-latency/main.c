@@ -88,7 +88,9 @@ args_t args = {
     .bw_iterations = 1000,
     .bw_cacheline_bytes = 64,    // cacheline size default is 64 bytes for bandwdith
     .bw_use_hugepages = HUGEPAGES_NONE,      // use hugepages for bandwidth
-    .bw_write = 0,
+    .bw_op = BW_OP_READ,         // default bandwidth operation is read
+    .bw_stride = 64,             // default stride is 64 bytes
+    .bw_random_jump_freq = 0,    // default no random jumps
 
 };
 
@@ -154,6 +156,17 @@ int main(int argc, char *argv[]) {
         args.hwclock_freq = get_default_cntfreq();
     }
 
+    // Auto-estimate CPU frequency if not specified by user
+    if (args.mhz == 1e3/CYCLE_TIME_NS) {  // Still at default value
+        const struct timeval target_measurement_duration = { .tv_sec = 0, .tv_usec = 100000 };
+        unsigned long cpu_freq_hz = estimate_hwclock_freq(0, 3, 0, target_measurement_duration);
+        double cpu_freq_mhz = cpu_freq_hz / 1e6;
+        unsigned long rounded_mhz = ((unsigned long)(cpu_freq_mhz + 50) / 100) * 100;
+        args.mhz = rounded_mhz;
+        args.cycle_time_ns = 1e3 / args.mhz;
+        printf("Estimated CPU frequency: %.0f MHz (using %lu MHz)\n\n", cpu_freq_mhz, rounded_mhz);
+    }
+
     // recompute delay_ticks if delay_seconds_valid
 
     if (args.delay_seconds_valid) {
@@ -209,7 +222,12 @@ int main(int argc, char *argv[]) {
     printf("coarse loop delay   (-C) = %zu\n", args.bw_outer_nops);
     printf("bw_cacheline_bytes  (-Z) = %zu\n", args.bw_cacheline_bytes);
     printf("bw_use_hugepages    (-H) = %d (hugepages = %s)\n", args.bw_use_hugepages, hugepage_map(args.bw_use_hugepages));
-    printf("bw_write            (-W) = %d\n", args.bw_write);
+    const char *bw_op_names[] = {"read", "memcpy", "memcpy_noinops", "write", "memset1", "memset64", 
+                                  "mix100r", "mix5w", "mix10w", "mix15w", "mix20w", "mix25w",
+                                  "mix30w", "mix35w", "mix40w", "mix50w"};
+    printf("bw_operation        (-O) = %s\n", bw_op_names[args.bw_op]);
+    printf("bw_stride                = %zu\n", args.bw_stride);
+    printf("bw_random_jump_freq      = %zu\n", args.bw_random_jump_freq);
 
     printf("\n");
     printf("latency settings:\n");
@@ -260,7 +278,10 @@ int main(int argc, char *argv[]) {
             bw_tinfo[bw_thread_num].iterations = args.bw_iterations;
             bw_tinfo[bw_thread_num].bw_cacheline_bytes = args.bw_cacheline_bytes;
             bw_tinfo[bw_thread_num].bw_use_hugepages = args.bw_use_hugepages;
-            bw_tinfo[bw_thread_num].bw_write = args.bw_write;
+            bw_tinfo[bw_thread_num].bw_op = args.bw_op;
+            bw_tinfo[bw_thread_num].bw_stride = args.bw_stride;
+            bw_tinfo[bw_thread_num].bw_random_jump_freq = args.bw_random_jump_freq;
+            bw_tinfo[bw_thread_num].mem = NULL;
             sprintf(bw_tinfo[bw_thread_num].threadname, "bw_thread_%zu", bw_thread_num);
             bw_thread_num++;
         }

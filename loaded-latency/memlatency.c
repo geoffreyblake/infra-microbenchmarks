@@ -195,9 +195,9 @@ void latency_thread (struct lat_thread_info * lat_tinfo) {
     }
     p = run(p, lat_offset / 10);    // advance p to start offset. / 10 because there are 10 deploads per iteration in run()
 
-    printf("CPU%d LATTHREAD%d: cacheline_count = %zu, iterations = %zu, mem = %p, randomize = %d, use_hugepages = %d, hwcounter_start = 0x%zx, lat_offset = %zu, tid = %d\n",
+    printf("CPU%d LATTHREAD%d: cacheline_count = %zu, iterations = %zu, mem = %p, randomize = %d, use_hugepages = %d, hwcounter_start = 0x%zx, lat_offset = %zu\n",
            cpu, thread_num, cacheline_count, iterations, mem, randomize,
-           use_hugepages, hwcounter_start, lat_offset, gettid());
+           use_hugepages, hwcounter_start, lat_offset);
 
     // wait until hwcounter reaches the expected value
     while ((start_tick = read_hwcounter()) < hwcounter_start) {

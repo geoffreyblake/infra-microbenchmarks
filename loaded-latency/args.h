@@ -7,6 +7,8 @@
 #ifndef ARGS_H
 #define ARGS_H
 
+#include "bandwidth.h"
+
 typedef struct {
     cpu_set_t lat_cpuset;
     cpu_set_t lat_warmup_cpuset;
@@ -42,7 +44,9 @@ typedef struct {
     size_t    bw_iterations;
     size_t    bw_cacheline_bytes;  // cacheline size default is 64 bytes for bandwdith
     int       bw_use_hugepages;    // use hugepages for bandwidth
-    int       bw_write;   // bw_write = 1 means to do writes for mem bandwidth instead of reads
+    enum bw_op_e bw_op;            // bandwidth operation type
+    size_t    bw_stride;           // stride in bytes for bandwidth operations
+    size_t    bw_random_jump_freq; // jump to random location every N iterations
 
 } args_t;
 

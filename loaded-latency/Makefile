@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 CC = gcc
-SRC = main.c bandwidth.c memlatency.c alloc.c args.c
+SRC = main.c bandwidth.c memlatency.c alloc.c args.c bw_mix_unrolled.c
 CFLAGS = -O2 -Wall
 LDFLAGS = -pthread
 EXE = loaded-latency
