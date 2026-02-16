@@ -404,6 +404,10 @@ void handle_args(int argc, char ** argv, args_t * pargs) {
                     pargs->bw_op = BW_OP_MIX_45W;
                 } else if (strcasecmp(optarg, "mix50w") == 0) {
                     pargs->bw_op = BW_OP_MIX_50W;
+                } else if (strcasecmp(optarg, "mix75w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_75W;
+                } else if (strcasecmp(optarg, "mix100w") == 0) {
+                    pargs->bw_op = BW_OP_MIX_100W;
                 } else {
                     printf("Error: unknown bandwidth operation '%s'\n", optarg);
                     printf("Valid operations: read, write, memcpy, memset1, memset64, mix100r, mix5w-mix50w\n");

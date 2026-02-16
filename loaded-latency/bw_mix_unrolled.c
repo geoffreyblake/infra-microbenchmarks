@@ -85,7 +85,34 @@
     LOAD_INCR(dummy, p, offset, stride); LOAD_INCR(dummy, p, offset, stride); \
     LOAD_INCR(dummy, p, offset, stride); LOAD_INCR(dummy, p, offset, stride)
 
+#define LOADS_5(dummy, p, offset, stride) \
+    LOAD_INCR(dummy, p, offset, stride); LOAD_INCR(dummy, p, offset, stride); \
+    LOAD_INCR(dummy, p, offset, stride); LOAD_INCR(dummy, p, offset, stride); \
+    LOAD_INCR(dummy, p, offset, stride);
+
 /* Generate N stores */
+#define STORES_20(dummy, p, offset, stride) \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_OP(dummy, p, offset)
+
+#define STORES_15(dummy, p, offset, stride) \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
+    STORE_OP(dummy, p, offset)
+
 #define STORES_10(dummy, p, offset, stride) \
     STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
     STORE_INCR(dummy, p, offset, stride); STORE_INCR(dummy, p, offset, stride); \
@@ -378,3 +405,44 @@ void my_mix_55r_45w(struct bw_thread_info const *bw_tinfo) {
         delay_loop(inner_nops);
     }
 }
+
+/* 25% reads, 75% writes - 5 reads + 15 writes */
+void my_mix_25r_75w(struct bw_thread_info const *bw_tinfo) {
+    void *p = bw_tinfo->mem;
+    size_t bytes = bw_tinfo->bw_buflen;
+    size_t stride = bw_tinfo->bw_stride;
+    size_t random_jump_freq = bw_tinfo->bw_random_jump_freq;
+    uint32_t rng_state = (uint32_t)(uintptr_t)p;
+    size_t inner_nops = bw_tinfo->inner_nops;
+    size_t dummy = 0;
+    size_t op_count = 0;
+    size_t num_strides = bytes / stride;
+
+    for (size_t i = 0; i < bytes; i += stride * 20) {
+        size_t offset = get_offset(i, random_jump_freq, op_count++, &rng_state, num_strides, stride);
+        LOADS_5(dummy, p, offset, stride);
+        offset += stride;
+        STORES_15(dummy, p, offset, stride);
+        delay_loop(inner_nops);
+    }
+}
+
+/* 100% writes - 20 writes */
+void my_mix_0r_100w(struct bw_thread_info const *bw_tinfo) {
+    void *p = bw_tinfo->mem;
+    size_t bytes = bw_tinfo->bw_buflen;
+    size_t stride = bw_tinfo->bw_stride;
+    size_t random_jump_freq = bw_tinfo->bw_random_jump_freq;
+    uint32_t rng_state = (uint32_t)(uintptr_t)p;
+    size_t inner_nops = bw_tinfo->inner_nops;
+    size_t dummy = 0;
+    size_t op_count = 0;
+    size_t num_strides = bytes / stride;
+
+    for (size_t i = 0; i < bytes; i += stride * 20) {
+        size_t offset = get_offset(i, random_jump_freq, op_count++, &rng_state, num_strides, stride);
+        STORES_20(dummy, p, offset, stride);
+        delay_loop(inner_nops);
+    }
+}
+

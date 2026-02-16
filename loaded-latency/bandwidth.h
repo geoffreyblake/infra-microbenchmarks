@@ -28,6 +28,8 @@ enum bw_op_e {
     BW_OP_MIX_40W,
     BW_OP_MIX_45W,
     BW_OP_MIX_50W,
+    BW_OP_MIX_75W,
+    BW_OP_MIX_100W,
     NUM_BW_OPS
 };
 
@@ -90,5 +92,7 @@ void my_mix_65r_35w(struct bw_thread_info const *bw_tinfo);
 void my_mix_60r_40w(struct bw_thread_info const *bw_tinfo);
 void my_mix_55r_45w(struct bw_thread_info const *bw_tinfo);
 void my_mix_50r_50w(struct bw_thread_info const *bw_tinfo);
+void my_mix_25r_75w(struct bw_thread_info const *bw_tinfo);
+void my_mix_0r_100w(struct bw_thread_info const *bw_tinfo);
 
 #endif

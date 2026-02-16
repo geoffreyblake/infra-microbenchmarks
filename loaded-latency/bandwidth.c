@@ -63,6 +63,8 @@ static void my_mix_35w(struct bw_thread_info const *bw_tinfo) { my_mix_65r_35w(b
 static void my_mix_40w(struct bw_thread_info const *bw_tinfo) { my_mix_60r_40w(bw_tinfo); }
 static void my_mix_45w(struct bw_thread_info const *bw_tinfo) { my_mix_55r_45w(bw_tinfo); }
 static void my_mix_50w(struct bw_thread_info const *bw_tinfo) { my_mix_50r_50w(bw_tinfo); }
+static void my_mix_75w(struct bw_thread_info const *bw_tinfo) { my_mix_25r_75w(bw_tinfo); }
+static void my_mix_100w(struct bw_thread_info const *bw_tinfo) { my_mix_0r_100w(bw_tinfo); }
 
 
 static const bw_op_func_t bw_op_funcs[NUM_BW_OPS] = {
@@ -83,6 +85,8 @@ static const bw_op_func_t bw_op_funcs[NUM_BW_OPS] = {
     &my_mix_40w,
     &my_mix_45w,
     &my_mix_50w,
+    &my_mix_75w,
+    &my_mix_100w,
 };
 
 
@@ -361,6 +365,13 @@ void bandwidth_thread (struct bw_thread_info * bw_tinfo) {
             case BW_OP_MIX_50W:
                 sample_bw_bytes_read += buflen * 50 / 100;
                 sample_bw_bytes_written += buflen * 50 / 100;
+                break;
+            case BW_OP_MIX_75W:
+                sample_bw_bytes_read += buflen * 25 / 100;
+                sample_bw_bytes_written += buflen * 75 / 100;
+                break;
+            case BW_OP_MIX_100W:
+                sample_bw_bytes_written += buflen;
                 break;
             default:
                 break;

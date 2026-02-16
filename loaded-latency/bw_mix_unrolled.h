@@ -19,5 +19,7 @@ void my_mix_65r_35w(struct bw_thread_info const *bw_tinfo);
 void my_mix_60r_40w(struct bw_thread_info const *bw_tinfo);
 void my_mix_55r_45w(struct bw_thread_info const *bw_tinfo);
 void my_mix_50r_50w(struct bw_thread_info const *bw_tinfo);
+void my_mix_25r_75w(struct bw_thread_info const *bw_tinfo);
+void my_mix_0r_100w(struct bw_thread_info const *bw_tinfo);
 
 #endif /* BW_MIX_UNROLLED_H */
