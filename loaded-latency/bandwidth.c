@@ -42,8 +42,6 @@
 #define STREAM_TYPE             double
 #endif
 
-typedef void (*bw_op_func_t)(struct bw_thread_info const *bw_tinfo);
-
 static void my_read(struct bw_thread_info const *bw_tinfo) __attribute__((noinline));
 static void my_memcpy(struct bw_thread_info const *bw_tinfo) __attribute__((noinline));
 static void my_memcpy_no_inner_nops(struct bw_thread_info const *bw_tinfo) __attribute__((noinline));
@@ -67,7 +65,7 @@ static void my_mix_75w(struct bw_thread_info const *bw_tinfo) { my_mix_25r_75w(b
 static void my_mix_100w(struct bw_thread_info const *bw_tinfo) { my_mix_0r_100w(bw_tinfo); }
 
 
-static const bw_op_func_t bw_op_funcs[NUM_BW_OPS] = {
+const bw_op_func_t bw_op_funcs[NUM_BW_OPS] = {
     &my_read,
     &my_memcpy,
     &my_memcpy_no_inner_nops,

@@ -95,4 +95,7 @@ void my_mix_50r_50w(struct bw_thread_info const *bw_tinfo);
 void my_mix_25r_75w(struct bw_thread_info const *bw_tinfo);
 void my_mix_0r_100w(struct bw_thread_info const *bw_tinfo);
 
+typedef void (*bw_op_func_t)(struct bw_thread_info const *bw_tinfo);
+extern const bw_op_func_t bw_op_funcs[NUM_BW_OPS];
+
 #endif

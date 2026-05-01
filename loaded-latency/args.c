@@ -127,6 +127,10 @@ static void print_help(void) {
 "                                       mix100r, mix5w, mix10w, mix15w, mix20w, mix25w, mix30w, mix35w, mix40w, mix50w\n"
 "      --bw-stride             bytes    stride in bytes for bandwidth operations (default: 64)\n"
 "      --bw-random-jump        freq     jump to random location every N iterations (0=disabled)\n"
+"      --target-bw-per-core    MB/s     target bandwidth in MB/s per core (calibrates delays automatically)\n"
+"      --calibration-buflen    bytes    buffer size for calibration (default: 500MB)\n"
+"      --calibration-start     nops     starting point for calibration binary search (default: 1000)\n"
+"      --calibration-error-threshold pct max allowed calibration error in absolute percent difference (default: 10)\n"
 "\n"
 " --help                                this screen\n"
 "\n"
@@ -148,7 +152,11 @@ void handle_args(int argc, char ** argv, args_t * pargs) {
         delay_ticks_val = 3,
         show_per_thread_concurrency_val = 4,
         bw_stride_val = 5,
-        bw_random_jump_val = 6
+        bw_random_jump_val = 6,
+        target_bw_per_core_val = 7,
+        calibration_buflen_val = 8,
+        calibration_start_val = 9,
+        calibration_error_threshold_val = 10
     };
 
     static struct option long_options[] = {
@@ -190,6 +198,10 @@ void handle_args(int argc, char ** argv, args_t * pargs) {
         {"bw-operation",        required_argument,  0,      'O'},
         {"bw-stride",           required_argument,  0,      bw_stride_val},
         {"bw-random-jump",      required_argument,  0,      bw_random_jump_val},
+        {"target-bw-per-core",  required_argument,  0,      target_bw_per_core_val},
+        {"calibration-buflen",  required_argument,  0,      calibration_buflen_val},
+        {"calibration-start",   required_argument,  0,      calibration_start_val},
+        {"calibration-error-threshold", required_argument, 0, calibration_error_threshold_val},
 
         {"help",                no_argument,        0,      help_val},
         {0,                     0,                  0,      0}
@@ -421,6 +433,22 @@ void handle_args(int argc, char ** argv, args_t * pargs) {
 
             case bw_random_jump_val:  // --bw-random-jump freq
                 pargs->bw_random_jump_freq = strtoul(optarg, NULL, 0);
+                break;
+
+            case target_bw_per_core_val:  // --target-bw-per-core MB/s
+                pargs->target_bw_per_core = atoi(optarg);
+                break;
+
+            case calibration_buflen_val:  // --calibration-buflen bytes
+                pargs->calibration_buflen = strtoul(optarg, NULL, 0);
+                break;
+
+            case calibration_start_val:  // --calibration-start nops
+                pargs->calibration_start = strtoul(optarg, NULL, 0);
+                break;
+
+            case calibration_error_threshold_val:  // --calibration-error-threshold %
+                pargs->calibration_error_threshold = atof(optarg);
                 break;
 
         }

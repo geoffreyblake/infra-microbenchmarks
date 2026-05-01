@@ -47,6 +47,10 @@ typedef struct {
     enum bw_op_e bw_op;            // bandwidth operation type
     size_t    bw_stride;           // stride in bytes for bandwidth operations
     size_t    bw_random_jump_freq; // jump to random location every N iterations
+    int       target_bw_per_core;  // target bandwidth in MB/s per core (0 = disabled)
+    size_t    calibration_buflen;  // buffer size for calibration (default 500MB)
+    size_t    calibration_start;   // starting point for binary search (default 200)
+    double    calibration_error_threshold; // max allowed error % (default 10%)
 
 } args_t;
 

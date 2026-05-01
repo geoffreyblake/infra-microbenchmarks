@@ -142,6 +142,10 @@ The tool now automatically estimates CPU frequency if not specified:
 -O | --bw-operation          op          Operation type (see table above)
      --bw-stride             bytes       Stride in bytes (default: 64)
      --bw-random-jump        freq        Random jump every N iterations (0=disabled)
+     --target-bw-per-core    MB/s        Run a calibration loop to find delay settings to hit BW (default disabled: 0)
+     --calibration-buflen    bytes       Calibration buffer size (default: 500000000)
+     --calibration-start     count       Starting point fo fine tuning --bw-fine-delay automatically (default: 1000)
+     --calibration-error-threshold pct   Tolerance to calibration BW, in absolute percent difference (default: 10)
 ```
 
 ## Advanced Usage Examples
@@ -157,6 +161,19 @@ The tool now automatically estimates CPU frequency if not specified:
                  --bw-cpu 1 \
                  --bw-buflen $((96*1024*1024)) \
                  --bw-fine-delay 100 \
+                 --bw-iterations 30
+```
+
+**64MB latency loop with 96MB bandwidth with 1000MB/s per core:**
+```bash
+./loaded-latency --lat-cpu 0 \
+                 --lat-cacheline-count $((64*1024*1024/64)) \
+                 --lat-iterations 100000 \
+                 --lat-randomize \
+                 --bw-cpu 1 \
+                 --bw-buflen $((96*1024*1024)) \
+                 --target-bw-per-core 1000 \
+                 --calibration-buflen $((96*1024*1024)) \
                  --bw-iterations 30
 ```
 

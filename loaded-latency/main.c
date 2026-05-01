@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <ctype.h>
+#include <math.h>
 
 #include <sys/prctl.h>
 #include <sys/time.h>
@@ -91,10 +92,98 @@ args_t args = {
     .bw_op = BW_OP_READ,         // default bandwidth operation is read
     .bw_stride = 64,             // default stride is 64 bytes
     .bw_random_jump_freq = 0,    // default no random jumps
+    .target_bw_per_core = 0,     // default no target bandwidth (disabled)
+    .calibration_buflen = 500*1024*1024,  // 500MB calibration buffer
+    .calibration_start = 1000,    // start binary search at 1000
+    .calibration_error_threshold = 10.0,  // 10% error threshold
 
 };
 
+static int calibrate_bandwidth(struct bw_thread_info *bw_tinfo, int target_bw_mb, size_t start_nops, double error_threshold) {
+    printf("Calibrating bandwidth to target %d MB/s (starting at inner_nops=%zu)...\n", target_bw_mb, start_nops);
+    
+    double cntfreq = (double) read_cntfreq();
+    bw_op_func_t bw_op = bw_op_funcs[bw_tinfo->bw_op];
+    size_t inner_low = 0, inner_high = start_nops * 2;
+    size_t best_inner = start_nops;
+    double best_diff = 1e9;
+    double best_bw = 0;
+    
+    for (int iter = 0; iter < 15; iter++) {
+        size_t inner_mid = (inner_low + inner_high) / 2;
+        bw_tinfo->inner_nops = inner_mid;
+        bw_tinfo->outer_nops = 0;
+        
+        unsigned long start_tick = read_hwcounter();
+        bw_op(bw_tinfo);
+        unsigned long stop_tick = read_hwcounter();
+        
+        double elapsed = (stop_tick - start_tick) / cntfreq;
+        double bw_mb = bw_tinfo->bw_buflen / (elapsed * 1024 * 1024);
+        double diff = bw_mb - target_bw_mb;
+        
+        if (fabs(diff) < fabs(best_diff)) {
+            best_diff = diff;
+            best_inner = inner_mid;
+            best_bw = bw_mb;
+        }
+        
+        if (bw_mb > target_bw_mb) {
+            inner_low = inner_mid + 1;
+        } else {
+            if (inner_mid == 0) break;
+            inner_high = inner_mid - 1;
+        }
+        
+        if (inner_low > inner_high) break;
+    }
+    
+    bw_tinfo->inner_nops = best_inner;
+    bw_tinfo->outer_nops = 0;
+    
+    double error_pct = fabs(best_diff) / target_bw_mb * 100.0;
+    printf("Calibration complete: inner_nops=%zu, achieved=%.0f MB/s (target=%d MB/s, error=%.1f%%)\n", 
+           best_inner, best_bw, target_bw_mb, error_pct);
+    
+    if (error_pct > error_threshold) {
+        fprintf(stderr, "ERROR: Calibration failed - error %.1f%% exceeds %.1f%% threshold\n", error_pct, error_threshold);
+        fprintf(stderr, "Target %d MB/s is likely unachievable on this system\n", target_bw_mb);
+        return -1;
+    }
+    
+    return 0;
+}
 
+static int run_calibration(struct bw_thread_info *bw_tinfo, int num_threads, args_t *args) {
+    printf("\nCalibrating bandwidth threads to target %d MB/s per core...\n", args->target_bw_per_core);
+    
+    size_t cal_buflen = args->calibration_buflen;
+    if (args->bw_buflen < cal_buflen) cal_buflen = args->bw_buflen;
+    
+    void *cal_mem = do_alloc(cal_buflen, args->bw_use_hugepages, sysconf(_SC_PAGESIZE));
+    memset(cal_mem, 0xA, cal_buflen);
+    bw_tinfo[0].mem = cal_mem;
+    
+    size_t orig_buflen = bw_tinfo[0].bw_buflen;
+    bw_tinfo[0].bw_buflen = cal_buflen;
+    
+    int ret = calibrate_bandwidth(&bw_tinfo[0], args->target_bw_per_core, args->calibration_start, args->calibration_error_threshold);
+    
+    bw_tinfo[0].bw_buflen = orig_buflen;
+    free(cal_mem);
+    bw_tinfo[0].mem = NULL;
+    
+    if (ret != 0) {
+        return -1;
+    }
+    
+    for (int i = 0; i < num_threads; i++) {
+        bw_tinfo[i].inner_nops = bw_tinfo[0].inner_nops;
+        bw_tinfo[i].outer_nops = bw_tinfo[0].outer_nops;
+    }
+    
+    return 0;
+}
 
 
 int main(int argc, char *argv[]) {
@@ -257,6 +346,7 @@ int main(int argc, char *argv[]) {
     unsigned long hwcounter_start = hwcounter_now + args.delay_ticks;
     unsigned long hwcounter_stop = hwcounter_start + read_cntfreq() * args.duration;
 
+    // Note: timing will be recalculated after calibration if needed
 
     /* set up bandwidth threads */
 
@@ -284,6 +374,25 @@ int main(int argc, char *argv[]) {
             bw_tinfo[bw_thread_num].mem = NULL;
             sprintf(bw_tinfo[bw_thread_num].threadname, "bw_thread_%zu", bw_thread_num);
             bw_thread_num++;
+        }
+    }
+
+    /* Calibrate bandwidth if target is specified */
+    if (args.target_bw_per_core > 0 && num_bw_threads > 0) {
+        if (run_calibration(bw_tinfo, num_bw_threads, &args) != 0) {
+            fprintf(stderr, "Calibration failed, exiting\n");
+            exit(EXIT_FAILURE);
+        }
+        
+        // Recalculate timing after calibration
+        hwcounter_now = read_hwcounter();
+        hwcounter_start = hwcounter_now + args.delay_ticks;
+        hwcounter_stop = hwcounter_start + read_cntfreq() * args.duration;
+        
+        // Update all thread timing
+        for (i = 0; i < num_bw_threads; i++) {
+            bw_tinfo[i].hwcounter_start = hwcounter_start;
+            bw_tinfo[i].hwcounter_stop = hwcounter_stop;
         }
     }
 
