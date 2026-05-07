@@ -248,7 +248,7 @@ int main(int argc, char *argv[]) {
     // Auto-estimate CPU frequency if not specified by user
     if (args.mhz == 1e3/CYCLE_TIME_NS) {  // Still at default value
         const struct timeval target_measurement_duration = { .tv_sec = 0, .tv_usec = 100000 };
-        unsigned long cpu_freq_hz = estimate_hwclock_freq(0, 3, 0, target_measurement_duration);
+        unsigned long cpu_freq_hz = estimate_hwclock_freq(-1, 3, 0, target_measurement_duration);
         double cpu_freq_mhz = cpu_freq_hz / 1e6;
         unsigned long rounded_mhz = ((unsigned long)(cpu_freq_mhz + 50) / 100) * 100;
         args.mhz = rounded_mhz;
@@ -864,6 +864,19 @@ unsigned long estimate_hwclock_freq(long cpu_num, size_t n, int verbose, struct 
     cpu_set_t cpu_mask;
 
     CPU_ZERO(&cpu_mask);
+    if (0 != sched_getaffinity(0, sizeof(cpu_mask), &cpu_mask)) {
+        handle_error("sched_getaffinity");
+    }
+    // Automatically determine first CPU allowed to do measurement, in case of 
+    // CGroups or thread affinity mask settings. 
+    if (cpu_num == -1) {
+        for (int i = 0; i < CPU_COUNT(&cpu_mask); i++) {
+            if (CPU_ISSET(i, &cpu_mask)) {
+                cpu_num = i;
+                break;
+            }
+        }
+    }
     CPU_SET(cpu_num, &cpu_mask);
 
     if (0 != sched_setaffinity(0, sizeof(cpu_mask), &cpu_mask)) {
