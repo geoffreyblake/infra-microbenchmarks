@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
     printf("bw_use_hugepages    (-H) = %d (hugepages = %s)\n", args.bw_use_hugepages, hugepage_map(args.bw_use_hugepages));
     const char *bw_op_names[] = {"read", "memcpy", "memcpy_noinops", "write", "memset1", "memset64", 
                                   "mix100r", "mix5w", "mix10w", "mix15w", "mix20w", "mix25w",
-                                  "mix30w", "mix35w", "mix40w", "mix45w", "mix50w", "mix75", "mix100w"};
+                                  "mix30w", "mix35w", "mix40w", "mix45w", "mix50w", "mix75w", "mix100w"};
     printf("bw_operation        (-O) = %s\n", bw_op_names[args.bw_op]);
     printf("bw_stride                = %zu\n", args.bw_stride);
     printf("bw_random_jump_freq      = %zu\n", args.bw_random_jump_freq);
